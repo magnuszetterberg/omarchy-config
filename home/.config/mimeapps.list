@@ -1,0 +1,18 @@
+# Open images with imv-dir instead of plain imv: it loads the whole folder
+# positioned on the clicked file, so Left/Right arrows step through the images.
+# (Omarchy's refresh-applications overwrites ~/.local/share/applications/imv.desktop,
+# so the association is changed here rather than in that file.)
+[Default Applications]
+image/png=imv-dir.desktop
+image/jpeg=imv-dir.desktop
+image/jpg=imv-dir.desktop
+image/gif=imv-dir.desktop
+image/bmp=imv-dir.desktop
+image/webp=imv-dir.desktop
+image/tiff=imv-dir.desktop
+image/x-xcf=imv-dir.desktop
+image/x-portable-pixmap=imv-dir.desktop
+image/x-xbitmap=imv-dir.desktop
+image/avif=imv-dir.desktop
+image/heif=imv-dir.desktop
+image/svg+xml=imv-dir.desktop

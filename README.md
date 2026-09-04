@@ -45,6 +45,7 @@ want to review before committing.
 | Command overrides | `.local/share/omarchy-overrides/bin/`, `.config/uwsm/env.d/50-omarchy-overrides` | Local replacements for packaged commands: calmer screensaver, monitor-scaling wrapper that re-reads monitors.lua, launcher keybinding hints, and the power-profile wrappers behind "Are u nuts?". |
 | Terminal | `.config/foot/foot.ini`, `.config/zellij/config.kdl`, `.bashrc` | foot opens into zellij; Alt drives zellij the way Super drives Hyprland; cheatsheet printed in the first pane. |
 | Theme | `.config/omarchy/themes/combitech/` | Custom theme. |
+| Image viewer | `.config/mimeapps.list` | Images open with `imv-dir`, so the viewer loads the whole folder and Left/Right step between pictures. Set here because Omarchy overwrites the imv desktop entry on refresh. |
 | CPU power caps | `system/usr/local/bin/zbook-power-caps` + systemd unit, udev rule, sudoers rule | HP ZBook Studio G9 firmware leaves the CPU peak cap at 45 W even on the 200 W adapter. This script raises it in "nuts" mode, re-applies on boot, resume and adapter events, and the sudoers rule lets the shell toggle it without a password. |
 
 ## Notes
