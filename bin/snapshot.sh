@@ -4,11 +4,13 @@
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 manifest_entries | while IFS=$'\t' read -r src dst kind; do
-  if [[ ! -e $dst ]]; then echo "missing $dst (skipped)"; continue; fi
   if [[ -r $dst ]]; then
     copy_path "$dst" "$src" "$kind"
-  else
+  elif [[ $dst == /etc/* || $dst == /usr/* ]] && sudo test -e "$dst"; then
+    # root-only files such as the sudoers rule
     mkdir -p "$(dirname "$src")"; sudo cat "$dst" > "$src"
+  else
+    echo "missing $dst (skipped)"
   fi
 done
 cd "$REPO"
