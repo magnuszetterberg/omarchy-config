@@ -1,0 +1,38 @@
+# Combitech — bold. Brand values from combitech.com, run at full voltage:
+#   #1cb898 CTA teal -> #00E5A8 electric   #004182 navy -> #0A5CC4
+#   ground dropped to near-black so the teal has nothing to compete with.
+
+mode = "dark"
+
+accent = "#00E5A8"
+selection = "#0A5CC4"
+muted = "#2C5C8F"
+
+background = "#000814"
+dark_background = "#00040C"
+darker_background = "#000206"
+lighter_background = "#0A2A52"
+
+foreground = "#DCEBF7"
+dark_foreground = "#5A85B0"
+light_foreground = "#C4DCF0"
+bright_foreground = "#FFFFFF"
+
+hyprland_active_border = "rgba(00E5A8ff) rgba(0A5CC4ff) rgba(00E5A8ff) 45deg"
+hyprland_inactive_border = "rgba(0A2A5288)"
+
+red = "#FF2D55"
+yellow = "#FFB300"
+orange = "#FF7A1F"
+green = "#7ED321"
+cyan = "#00E5A8"
+blue = "#1E90FF"
+magenta = "#B15CFF"
+brown = "#9C6B3C"
+
+bright_red = "#FF5C7A"
+bright_yellow = "#FFD24A"
+bright_green = "#A8F03C"
+bright_cyan = "#4DFFD0"
+bright_blue = "#5CB4FF"
+bright_magenta = "#CE94FF"

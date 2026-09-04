@@ -1,0 +1,10 @@
+[Unit]
+Description=Re-apply CPU power caps for the current power adapter
+After=suspend.target hibernate.target hybrid-sleep.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/zbook-power-caps auto
+
+[Install]
+WantedBy=multi-user.target suspend.target hibernate.target hybrid-sleep.target

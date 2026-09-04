@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "magnus.media-idle-inhibit",
+  "name": "Media Idle Inhibit",
+  "version": "1.0.0",
+  "author": "magnus",
+  "description": "Holds a Wayland idle inhibitor while any MPRIS player is actually playing, so the screensaver and lock stay away during audio/video playback in a normal (non-fullscreen) window.",
+  "kinds": [
+    "service"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

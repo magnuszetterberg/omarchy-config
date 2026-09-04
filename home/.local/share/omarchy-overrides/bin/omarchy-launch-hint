@@ -1,0 +1,176 @@
+#!/bin/bash
+
+# Keyboard-shortcut hints for launcher apps.
+#
+#   omarchy-launch-hint <desktop-id>   Notify the shortcut(s) for one app.
+#                                      Invoked by the gtk-launch override in
+#                                      this directory after a launcher pick.
+#   omarchy-launch-hint --map          Print a JSON object mapping desktop ids
+#                                      to their shortcut ("SUPER SHIFT + B")
+#                                      for every installed app. Used by the
+#                                      magnus.menu shell plugin to show
+#                                      shortcuts inline in the launcher.
+#
+# Matching is done against the keybinding records cache maintained by
+# omarchy-menu-keybindings, whose third column holds the real command behind
+# each Lua bind (hyprctl alone only reports "__lua").
+
+APP_DIRS=("$HOME/.local/share/applications" "$HOME/.nix-profile/share/applications" /usr/local/share/applications /usr/share/applications)
+
+records_file=""
+default_browser=""
+default_terminal=""
+
+load_context() {
+  omarchy-menu-keybindings --print >/dev/null 2>&1
+  records_file=$(ls -t "${XDG_CACHE_HOME:-$HOME/.cache}"/omarchy/keybindings-*.records 2>/dev/null | head -1)
+  [[ -s $records_file ]] || exit 0
+  default_browser=$(env -u BROWSER xdg-settings get default-web-browser 2>/dev/null)
+  default_terminal=$(xdg-terminal-exec --print-id 2>/dev/null)
+}
+
+find_desktop_file() {
+  local id="$1" dir
+  for dir in "${APP_DIRS[@]}"; do
+    if [[ -f "$dir/$id.desktop" ]]; then
+      printf '%s\n' "$dir/$id.desktop"
+      return
+    fi
+  done
+}
+
+# Echoes candidate tokens (one per line) for matching the app against binding
+# commands, and sets $name from the desktop entry.
+name=""
+tokens_for() {
+  local id="$1" desktop_file="$2" exec_line url w words
+  name="" exec_line=""
+  if [[ -n $desktop_file ]]; then
+    name=$(sed -n 's/^Name=//p' "$desktop_file" | head -1)
+    exec_line=$(sed -n 's/^Exec=//p' "$desktop_file" | head -1)
+  fi
+  [[ -z $name ]] && name="$id"
+
+  if [[ $exec_line =~ omarchy-launch(-or-focus)?-webapp[[:space:]]+([^[:space:]]+) ]]; then
+    # Webapps match by URL (trailing slash normalized away; the matcher's
+    # boundary check tolerates the record keeping one).
+    url="${BASH_REMATCH[2]//[\'\"]/}"
+    echo "${url%/}"
+  else
+    # First non-wrapper word of Exec, basename'd.
+    read -ra words <<<"$exec_line"
+    for w in "${words[@]}"; do
+      case "$w" in
+        env | uwsm-app | uwsm | setsid | xdg-terminal-exec | bash | sh | -- | -* | *=*) continue ;;
+        *)
+          w="${w//[\'\"]/}"
+          basename "$w"
+          break
+          ;;
+      esac
+    done
+    echo "$id"
+  fi
+
+  # The default browser and terminal are launched by role-named wrappers that
+  # never mention the concrete app, so map them explicitly.
+  [[ $default_browser == "$id.desktop" ]] && echo "omarchy-launch-browser"
+  [[ $default_terminal == "$id.desktop" ]] && echo "omarchy-launch-terminal"
+}
+
+# stdin: tokens, one per line. Prints up to $2 matching records as
+# "COMBO<TAB>DESCRIPTION", in the priority order of the records cache.
+match_records() {
+  local app_name="$1" max="$2"
+  awk -F'\t' -v name="$app_name" -v max="$max" '
+    # True when needle occurs in hay with a non-alphanumeric character (or
+    # string edge) before it and a non-alphanumeric, non-hyphen one after it,
+    # so "spotify" matches "omarchy-launch-spotify" but "omarchy-launch-terminal"
+    # does not also match "omarchy-launch-terminal-tmux".
+    function boundary_match(hay, needle, start, pos, before, after) {
+      if (needle == "") return 0
+      start = 1
+      while ((pos = index(substr(hay, start), needle)) > 0) {
+        pos = start + pos - 1
+        before = (pos > 1) ? substr(hay, pos - 1, 1) : " "
+        after = substr(hay, pos + length(needle), 1)
+        if (after == "") after = " "
+        if (before !~ /[a-z0-9]/ && after !~ /[a-z0-9-]/) return 1
+        start = pos + 1
+      }
+      return 0
+    }
+    NR == FNR { tokens[++n] = tolower($0); next }
+    $2 != "exec" { next }
+    {
+      split($1, display, / +→ /)
+      combo = display[1]
+      desc = display[2]
+      gsub(/[[:space:]]+$/, "", combo)
+      gsub(/[[:space:]]+/, " ", combo)
+      arg = tolower($3)
+      matched = (tolower(desc) == tolower(name))
+      for (i = 1; i <= n && !matched; i++) matched = boundary_match(arg, tokens[i])
+      if (!matched) next
+      line = combo "\t" desc
+      if (seen[line]++) next
+      if (++shown <= max) print line
+    }
+  ' - "$records_file"
+}
+
+notify_hint() {
+  local id="${1%.desktop}"
+  [[ -z $id ]] && exit 0
+  load_context
+
+  local hits
+  hits=$(tokens_for "$id" "$(find_desktop_file "$id")" | match_records "$name" 3 |
+    awk -F'\t' '{ print $1 "  —  " $2 }')
+  [[ -z $hits ]] && exit 0
+
+  # Let the launcher close and the app start before the tip appears.
+  sleep 1
+  notify-send -a "Shortcut tip" -i input-keyboard "💡 $name has a shortcut" "$hits"
+}
+
+print_map() {
+  load_context
+  local map_file="${XDG_CACHE_HOME:-$HOME/.cache}/omarchy/launcher-shortcut-hints.json"
+
+  # Reuse the cached map unless the bindings or an applications dir changed.
+  if [[ -s $map_file && $map_file -nt $records_file ]]; then
+    local stale="" dir
+    for dir in "${APP_DIRS[@]}"; do
+      [[ -d $dir && $dir -nt $map_file ]] && stale=1
+    done
+    if [[ -z $stale ]]; then
+      cat "$map_file"
+      return
+    fi
+  fi
+
+  local dir file id combo
+  declare -A seen
+  {
+    for dir in "${APP_DIRS[@]}"; do
+      [[ -d $dir ]] || continue
+      for file in "$dir"/*.desktop; do
+        [[ -e $file ]] || continue
+        id=$(basename "$file" .desktop)
+        [[ -n ${seen[$id]} ]] && continue
+        seen[$id]=1
+        grep -qE '^(NoDisplay|Hidden)=true' "$file" && continue
+        combo=$(tokens_for "$id" "$file" | match_records "$name" 1 | cut -f1)
+        [[ -n $combo ]] && printf '%s\t%s\n' "$id" "$combo"
+      done
+    done
+  } | jq -Rn '[inputs | split("\t") | {(.[0]): .[1]}] | add // {}' >"$map_file.tmp" &&
+    mv "$map_file.tmp" "$map_file"
+  cat "$map_file"
+}
+
+case "${1-}" in
+  --map) print_map ;;
+  *) notify_hint "${1-}" ;;
+esac

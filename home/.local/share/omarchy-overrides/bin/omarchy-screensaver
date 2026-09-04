@@ -1,0 +1,139 @@
+#!/bin/bash
+
+# Local override of the packaged omarchy-screensaver. Tuned for a calm,
+# "zen" feel rather than the stock demo-reel of TTE effects.
+#
+# Three deliberate departures from the packaged script:
+#   1. No --random-effect. Each effect is invoked by name with hand-tuned
+#      speed arguments, because --random-effect can only use TTE's defaults,
+#      which are built to show off rather than to sit quietly on a screen.
+#   2. One low-contrast two-tone palette, pulled from the active Omarchy
+#      theme, replaces every effect's stock neon gradient. Colours stay in a
+#      single hue family so nothing flickers between hues.
+#   3. The finished logo rests untouched for HOLD_SECONDS between effects.
+#      Most of the screensaver's life is a still image.
+#
+# Placed ahead of /usr/bin on PATH via ~/.config/uwsm/env.d/50-omarchy-overrides.
+
+HOLD_SECONDS=90 # time the finished logo simply sits there between effects
+
+# --- palette -----------------------------------------------------------------
+# Two close, muted tones from the current theme. Low contrast and one hue
+# family is what keeps the colour from reading as "activity".
+THEME_COLORS=~/.local/state/omarchy/current/theme/colors.toml
+
+theme_color() {
+  local key=$1 fallback=$2 value=
+  if [[ -r $THEME_COLORS ]]; then
+    value=$(sed -n "s/^${key}[[:space:]]*=[[:space:]]*\"\(#\?[0-9a-fA-F]\{6\}\)\".*/\1/p" "$THEME_COLORS" | head -1)
+  fi
+  echo "${value:-$fallback}"
+}
+
+C_DIM=$(theme_color dark_foreground '#565f89') # quiet base tone
+C_LIT=$(theme_color accent '#7aa2f7')          # slightly brighter partner
+
+# --- effects -----------------------------------------------------------------
+# Each entry is a complete ttfx argument list. Anything with scattering,
+# exploding, glitching or falling debris is deliberately absent.
+#
+# Effects with no speed argument of their own (highlight, sweep) are slowed
+# with a lower --frame-rate instead; effects that move characters are kept at
+# a smoother frame rate and slowed through their own movement arguments.
+effects=()
+
+# Static text; a single gradient drifts across it and settles. The stillest
+# of the set, so it is listed twice to come up more often.
+effects+=("--frame-rate 60 colorshift
+  --gradient-stops $C_DIM $C_LIT --gradient-steps 24 --gradient-frames 20
+  --travel-direction radial --cycles 1
+  --final-gradient-stops $C_LIT $C_DIM --final-gradient-steps 16")
+effects+=("--frame-rate 60 colorshift
+  --gradient-stops $C_DIM $C_LIT --gradient-steps 24 --gradient-frames 20
+  --travel-direction vertical --cycles 1
+  --final-gradient-stops $C_DIM $C_LIT --final-gradient-steps 16")
+
+# Static text; one slow band of light passes over it. Nothing moves.
+effects+=("--frame-rate 20 highlight
+  --highlight-brightness 1.35 --highlight-width 16
+  --highlight-direction diagonal_bottom_left_to_top_right
+  --final-gradient-stops $C_DIM $C_LIT --final-gradient-steps 16")
+
+# Text breathes outward from a single point.
+effects+=("--frame-rate 60 expand
+  --movement-speed 0.06 --expand-easing in_out_sine
+  --final-gradient-stops $C_DIM $C_LIT --final-gradient-steps 16")
+
+# Characters settle downward like sediment.
+effects+=("--frame-rate 60 pour
+  --pour-direction down --pour-speed 1 --gap 4
+  --movement-speed-range 0.05-0.12 --movement-easing out_sine
+  --starting-color $C_DIM
+  --final-gradient-stops $C_DIM $C_LIT --final-gradient-steps 16 --final-gradient-frames 20")
+
+# Rows drift in from both sides and meet.
+effects+=("--frame-rate 60 slide
+  --movement-speed 0.15 --gap 6 --grouping row --merge --movement-easing in_out_sine
+  --final-gradient-stops $C_DIM $C_LIT --final-gradient-steps 16 --final-gradient-frames 20")
+
+# --- screensaver plumbing (as packaged) --------------------------------------
+screensaver_in_focus() {
+  hyprctl activewindow -j | jq -e '.class == "org.omarchy.screensaver"' >/dev/null 2>&1
+}
+
+exit_screensaver() {
+  hyprctl eval 'hl.config({ cursor = { invisible = false } })' &>/dev/null || hyprctl keyword cursor:invisible false &>/dev/null || true
+  pkill -x ttfx 2>/dev/null
+  pkill -f '[o]rg.omarchy.screensaver' 2>/dev/null
+  exit 0
+}
+
+# Exit the screensaver on signals and input from keyboard and mouse
+trap exit_screensaver SIGINT SIGTERM SIGHUP SIGQUIT
+
+printf '\033]11;rgb:00/00/00\007' # Set background color to black
+
+hyprctl eval 'hl.config({ cursor = { invisible = true } })' &>/dev/null || hyprctl keyword cursor:invisible true &>/dev/null
+
+tty=$(tty 2>/dev/null)
+
+# Terminals allocate the pty at the default 80x24 and only resize it once the
+# compositor has told the window how big it is. ttfx measures the terminal once,
+# at startup, so starting it before the resize lands sizes an 80x24 canvas and
+# paints it into the corner of a fullscreen window.
+wait_for_terminal_resize() {
+  local deadline=$((SECONDS + 2))
+  while ((SECONDS < deadline)) && [[ $(stty size 2>/dev/null) == "24 80" ]]; do
+    sleep 0.02
+  done
+}
+
+# Idle for N seconds while staying responsive to input and focus loss.
+hold() {
+  local remaining=$1
+  while ((remaining-- > 0)); do
+    if read -n1 -t 1 || ! screensaver_in_focus; then
+      exit_screensaver
+    fi
+  done
+}
+
+wait_for_terminal_resize
+
+while true; do
+  # Unquoted expansion is intentional: the entry is an argument list, and the
+  # entries wrap over several lines (read -ra would stop at the first newline).
+  effect_args=(${effects[RANDOM % ${#effects[@]}]})
+
+  ttfx -i ~/.config/omarchy/branding/screensaver.txt \
+    --canvas-width 0 --canvas-height 0 --reuse-canvas --anchor-canvas c --anchor-text c \
+    --no-eol --no-restore-cursor "${effect_args[@]}" &
+
+  while pgrep -t "${tty#/dev/}" -x ttfx >/dev/null; do
+    if read -n1 -t 1 || ! screensaver_in_focus; then
+      exit_screensaver
+    fi
+  done
+
+  hold "$HOLD_SECONDS"
+done

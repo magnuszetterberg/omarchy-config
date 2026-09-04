@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Override of /usr/bin/gtk-launch: the Omarchy launcher starts every picked
+# app through gtk-launch, so this is the one choke point where a
+# keybinding-learning hint can be attached. The hint runs detached and can
+# never block or fail the launch.
+(setsid "$(dirname "$(realpath "$0")")/omarchy-launch-hint" "$1" >/dev/null 2>&1 &)
+exec /usr/bin/gtk-launch "$@"

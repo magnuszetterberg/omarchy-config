@@ -1,0 +1,9 @@
+# Put local overrides of packaged omarchy-* commands ahead of /usr/bin.
+# Currently holds a toned-down omarchy-screensaver, a monitor-scaling
+# wrapper that re-reads monitors.lua after a scale change, and a gtk-launch
+# shim that shows keybinding hints for apps picked in the launcher.
+case ":$PATH:" in
+  *":$HOME/.local/share/omarchy-overrides/bin:"*) ;;
+  *) PATH="$HOME/.local/share/omarchy-overrides/bin${PATH:+:$PATH}" ;;
+esac
+export PATH

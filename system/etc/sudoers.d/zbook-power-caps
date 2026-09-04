@@ -1,0 +1,2 @@
+# Let the Omarchy shell toggle the CPU power caps ("Are u nuts?" profile) without a password.
+magnus ALL=(root) NOPASSWD: /usr/local/bin/zbook-power-caps

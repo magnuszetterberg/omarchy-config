@@ -1,0 +1,2 @@
+# Re-evaluate CPU power caps whenever the AC adapter changes state.
+SUBSYSTEM=="power_supply", ATTR{type}=="Mains", TAG+="systemd", ENV{SYSTEMD_WANTS}+="zbook-power-caps.service"

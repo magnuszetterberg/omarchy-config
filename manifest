@@ -1,0 +1,25 @@
+# Paths tracked by this repo. One per line.
+#   home/<path>    -> ~/<path>
+#   system/<path>  -> /<path>   (root-owned, installed with `install.sh --system`)
+# A trailing slash marks a directory (synced whole, extra files removed on install).
+home/.bashrc
+home/.config/hypr/bindings.lua
+home/.config/hypr/hyprland.lua
+home/.config/hypr/input.lua
+home/.config/hypr/monitors.lua
+home/.config/omarchy/shell.json
+home/.config/omarchy/shell.toml
+home/.config/omarchy/branding/about.txt
+home/.config/omarchy/branding/screensaver.txt
+home/.config/omarchy/plugins/magnus.media-idle-inhibit/
+home/.config/omarchy/plugins/magnus.menu/
+home/.config/omarchy/plugins/magnus.power/
+home/.config/omarchy/themes/combitech/
+home/.config/foot/foot.ini
+home/.config/zellij/config.kdl
+home/.config/uwsm/env.d/50-omarchy-overrides
+home/.local/share/omarchy-overrides/bin/
+system/usr/local/bin/zbook-power-caps
+system/etc/systemd/system/zbook-power-caps.service
+system/etc/udev/rules.d/90-zbook-power-caps.rules
+system/etc/sudoers.d/zbook-power-caps

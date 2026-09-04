@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Local override of the packaged omarchy-hyprland-monitor-scaling.
+#
+# The packaged command changes the FOCUSED monitor only: it applies the new
+# scale to that one screen with position = "auto", and only afterwards writes
+# the value into ~/.config/hypr/monitors.lua. That file derives the whole desk
+# layout from the scale -- every monitor's position, and a scale all the
+# connected panels can actually accept -- so until it is re-read the other
+# screens keep positions computed for the old scale and end up overlapping.
+#
+# So: run the real command, then re-read the config it just wrote.
+
+REAL=/usr/bin/omarchy-hyprland-monitor-scaling
+[[ -x $REAL ]] || REAL=/usr/share/omarchy/bin/omarchy-hyprland-monitor-scaling
+
+"$REAL" "$@"
+status=$?
+
+# Called with no arguments it only prints the current scale -- nothing moved.
+if (( $# )) && command -v hyprctl >/dev/null; then
+  hyprctl reload >/dev/null 2>&1
+fi
+
+exit $status

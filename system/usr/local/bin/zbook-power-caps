@@ -1,0 +1,53 @@
+#!/bin/sh
+# zbook-power-caps [nuts|stock|auto|status]
+#
+# HP's firmware raises PL1 to 70 W on the 200 W barrel adapter but leaves the
+# burst/peak caps at their battery values (PL2 40 W, PL4 45 W), which pins the
+# i7-12800H near 1.6 GHz all-core. Windows' Intel Dynamic Tuning driver lifts
+# them; on Linux nothing does. "nuts" mode writes the raised caps whenever the
+# barrel adapter is present; "stock" restores the firmware values.
+#
+#   nuts | stock   remember the mode in /var/lib/zbook-power-caps/mode and apply it
+#   auto           re-apply the remembered mode (boot, resume, adapter events)
+#   status         print mode and live caps (no root needed)
+
+STATE_DIR=/var/lib/zbook-power-caps
+STATE=$STATE_DIR/mode
+MMIO=/sys/class/powercap/intel-rapl-mmio:0
+MSR=/sys/class/powercap/intel-rapl:0
+
+NUTS_PL2=100000000    # firmware PPCC maximum for PL2 on AC
+NUTS_PL4=120000000    # chip spec is 215 W; 120 W keeps bursts moderate
+STOCK_PL2=40000000
+STOCK_PL4=45000000
+
+saved_mode() { cat "$STATE" 2>/dev/null || echo stock; }
+on_barrel() {
+    [ "$(cat /sys/class/power_supply/AC/online 2>/dev/null)" = 1 ] &&
+    [ "$(cat $MMIO/constraint_0_power_limit_uw 2>/dev/null || echo 0)" -ge 70000000 ]
+}
+apply() {
+    if [ "$1" = nuts ] && on_barrel; then
+        echo $NUTS_PL2 > $MMIO/constraint_1_power_limit_uw
+        echo $NUTS_PL4 > $MSR/constraint_2_power_limit_uw
+        logger -t zbook-power-caps "nuts on barrel: PL2=100W PL4=120W"
+    else
+        echo $STOCK_PL2 > $MMIO/constraint_1_power_limit_uw
+        echo $STOCK_PL4 > $MSR/constraint_2_power_limit_uw
+        logger -t zbook-power-caps "stock caps (mode=$1, barrel=$(on_barrel && echo yes || echo no)): PL2=40W PL4=45W"
+    fi
+}
+
+case "${1:-auto}" in
+    nuts|stock)
+        mkdir -p "$STATE_DIR"; chmod 755 "$STATE_DIR"
+        printf '%s\n' "$1" > "$STATE"; chmod 644 "$STATE"
+        apply "$1" ;;
+    auto)
+        sleep 3   # let the embedded controller publish the new PL1 after a plug event
+        apply "$(saved_mode)" ;;
+    status)
+        echo "mode=$(saved_mode) barrel=$(on_barrel && echo yes || echo no)"
+        echo "PL1=$(cat $MMIO/constraint_0_power_limit_uw)uW PL2=$(cat $MMIO/constraint_1_power_limit_uw)uW PL4=$(cat $MSR/constraint_2_power_limit_uw)uW" ;;
+    *)  echo "usage: zbook-power-caps [nuts|stock|auto|status]" >&2; exit 1 ;;
+esac
