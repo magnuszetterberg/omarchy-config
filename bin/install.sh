@@ -25,8 +25,10 @@ case $mode in
     echo "Reloading Hyprland and the Omarchy shell..."
     hyprctl reload >/dev/null 2>&1 || true
     omarchy restart shell >/dev/null 2>&1 || true
-    echo "Done. Log out and back in once so the override PATH from uwsm/env.d applies."
-    echo "Then run:  sudo $REPO/bin/install.sh --system"
+    if [[ -z ${OMARCHY_CONFIG_WRAPPED:-} ]]; then
+      echo "Done. Log out and back in once so the override PATH from uwsm/env.d applies."
+      echo "Then run:  sudo $REPO/bin/install.sh --system"
+    fi
     ;;
   system|--system)
     [[ $EUID -eq 0 ]] || { echo "run with sudo: sudo $0 --system" >&2; exit 1; }

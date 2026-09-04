@@ -6,10 +6,14 @@ brought back to the same state quickly.
 ## Restore on a fresh Omarchy install
 
 ```sh
-git clone <this repo> ~/omarchy-config
-~/omarchy-config/bin/install.sh            # home-directory files
-sudo ~/omarchy-config/bin/install.sh --system   # root-owned files (power caps)
+git clone git@github.com:magnuszetterberg/omarchy-config.git ~/omarchy-config
+~/omarchy-config/install-config.sh
 ```
+
+That installs the needed packages, copies the home-directory files, asks for
+sudo once to install the root-owned files, and activates the Combitech theme.
+The two halves can also be run separately with `bin/install.sh --home` and
+`sudo bin/install.sh --system`.
 
 Log out and back in once afterwards so the override PATH from
 `~/.config/uwsm/env.d` takes effect. Existing files are backed up next to

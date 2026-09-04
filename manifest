@@ -9,6 +9,7 @@ home/.config/hypr/input.lua
 home/.config/hypr/monitors.lua
 home/.config/omarchy/shell.json
 home/.config/omarchy/shell.toml
+home/.config/omarchy/defaults/agent
 home/.config/omarchy/branding/about.txt
 home/.config/omarchy/branding/screensaver.txt
 home/.config/omarchy/plugins/magnus.media-idle-inhibit/

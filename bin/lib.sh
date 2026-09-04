@@ -19,7 +19,9 @@ copy_path() {
   local src=$1 dst=$2 kind=$3
   mkdir -p "$(dirname "$dst")"
   if [[ $kind == dir ]]; then
-    rsync -a --delete --exclude '*.bak' --exclude '*.bak.*' "$src/" "$dst/"
+    rm -rf "$dst"
+    cp -a "$src" "$dst"
+    find "$dst" -name '*.bak' -o -name '*.bak.*' | xargs -r rm -f
   else
     cp -p "$src" "$dst"
   fi
