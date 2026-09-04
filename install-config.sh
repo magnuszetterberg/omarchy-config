@@ -31,6 +31,10 @@ if [[ $skip_system == no ]]; then
   sudo "$REPO/bin/install.sh" --system
 fi
 
+step "Weekly sync timer"
+systemctl --user daemon-reload
+systemctl --user enable --now omarchy-config-sync.timer
+
 step "Theme"
 if command -v omarchy >/dev/null && [[ -d $HOME/.config/omarchy/themes/combitech ]]; then
   omarchy theme set combitech || echo "theme set failed; run 'omarchy theme set combitech' later"

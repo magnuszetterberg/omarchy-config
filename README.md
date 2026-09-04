@@ -22,12 +22,15 @@ themselves as `<name>.bak.<timestamp>`.
 ## Save changes made on the live system
 
 ```sh
-~/omarchy-config/bin/snapshot.sh   # copies the live files back into the repo
-git -C ~/omarchy-config commit -am "Update config"
+~/omarchy-config/sync-config.sh          # snapshot + commit + push
+~/omarchy-config/sync-config.sh --check  # just show what changed
 ```
 
-`manifest` lists exactly which paths are tracked; add a line there to track
-something new.
+The same script runs every week from the `omarchy-config-sync.timer` user
+unit (`systemctl --user list-timers` shows the next run). It also warns about
+customised files that are not in `manifest` yet; add a `home/<path>` line
+there to start tracking one. `bin/snapshot.sh` is the copy-only half if you
+want to review before committing.
 
 ## What is in here
 

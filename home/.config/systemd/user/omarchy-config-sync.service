@@ -1,0 +1,7 @@
+[Unit]
+Description=Sync Omarchy config to the omarchy-config repo
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/omarchy-config/sync-config.sh
