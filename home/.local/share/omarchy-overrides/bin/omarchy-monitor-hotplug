@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# Re-read ~/.config/hypr/monitors.lua whenever a monitor is plugged in or out.
+#
+# monitors.lua works out the whole desk layout at config-load time: it reads the
+# EDID serial of every connected panel, orders them, picks a scale they all
+# accept and computes each position from that. Hyprland runs that Lua exactly
+# once, when the config is loaded -- so a monitor that appears later (docking,
+# or a dock that powers its ports up after Hyprland has started) is never seen
+# by it. Those panels fall through to the catch-all `output = ""` rule instead
+# and land side by side at scale 1 in connector order, which is the "displays
+# are wrong again" symptom. `hyprctl reload` re-runs the Lua and fixes it.
+#
+# So: watch Hyprland's event socket and reload on monitor changes.
+#
+# This does not duplicate the packaged omarchy-hyprland-monitor-watch, which
+# runs alongside it: that one handles clamshell state and recovers a monitor
+# that comes back reporting no mode, and it only reloads in that no-mode case.
+# An ordinary dock, where every panel does report a mode, reloads nowhere --
+# which is the gap this fills.
+
+set -u
+
+readonly SETTLE=2        # docking announces monitors one at a time; collect them
+readonly MIN_INTERVAL=3  # ...and never reload more often than this
+
+sig=${HYPRLAND_INSTANCE_SIGNATURE:-}
+[[ -n $sig ]] || exit 0
+
+runtime=${XDG_RUNTIME_DIR:-/run/user/$UID}
+socket=${FAKE_EVENTS:-}
+[[ -n $socket ]] || socket="$runtime/hypr/$sig/.socket2.sock"
+
+# One listener per Hyprland instance.
+exec 9>"$runtime/omarchy-monitor-hotplug.lock"
+flock -n 9 || exit 0
+
+now() {
+  local t
+  printf -v t '%(%s)T' -1
+  printf '%s' "$t"
+}
+
+# A monitor event does not trigger the reload itself; it pushes out a deadline.
+# Anything else on the socket is ignored -- crucially it must NOT cut the wait
+# short, or a dock's last monitor arrives just after the reload and is lost.
+pending=0
+deadline=0
+last=0
+
+stream() {
+  if [[ -n ${FAKE_EVENTS:-} ]]; then
+    cat "$socket"
+  else
+    socat -U - UNIX-CONNECT:"$socket" 2>/dev/null
+  fi
+}
+
+while :; do
+  if ((pending)); then
+    n=$(now)
+
+    if ((n >= deadline)); then
+      # Rate-limit by waiting, never by dropping: a reload deferred here is
+      # still a reload, whereas a dropped one leaves the screens wrong.
+      gap=$((last + MIN_INTERVAL - n))
+      ((gap > 0)) && sleep "$gap"
+
+      # Same guard the packaged watcher uses: never reload into half-replaced
+      # package config while a pacman transaction is in flight.
+      if omarchy-hyprland-reload-guard paused 2>/dev/null; then
+        deadline=$(($(now) + SETTLE))
+        continue
+      fi
+
+      hyprctl reload >/dev/null 2>&1
+      last=$(now)
+      pending=0
+      continue
+    fi
+
+    read -r -t "$((deadline - n))" line
+    status=$?
+    ((status > 128)) && continue  # deadline reached, nothing new
+    ((status == 0)) || break       # socket closed: Hyprland is gone
+  else
+    read -r line || break
+  fi
+
+  case $line in
+    monitoradded*|monitorremoved*)
+      pending=1
+      deadline=$(($(now) + SETTLE))
+      ;;
+  esac
+done < <(stream)

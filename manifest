@@ -3,6 +3,7 @@
 #   system/<path>  -> /<path>   (root-owned, installed with `install.sh --system`)
 # A trailing slash marks a directory (synced whole, extra files removed on install).
 home/.bashrc
+home/.config/hypr/autostart.lua
 home/.config/hypr/bindings.lua
 home/.config/hypr/hyprland.lua
 home/.config/hypr/input.lua

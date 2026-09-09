@@ -1,7 +1,7 @@
 -- See https://wiki.hypr.land/Configuring/Basics/Monitors/
 -- List current monitors and supported resolutions with: hyprctl monitors all
 
-local omarchy_gdk_scale = 1
+local omarchy_gdk_scale = 2
 
 -- Wanted scale. This is a wish, not a command: Hyprland only accepts a scale
 -- that divides a panel's pixel size into whole logical pixels, so the value
@@ -11,7 +11,7 @@ local omarchy_gdk_scale = 1
 --   work: 1 1.25 1.333 1.6 1.667 2 2.5 are exact (the 3440px ultrawide is the
 --         picky one -- it has no 1.2 and no 1.5)
 -- Check what was actually applied with: hyprctl monitors | grep -E 'Monitor|scale'
-local omarchy_monitor_scale = 1.25
+local omarchy_monitor_scale = 1.6
 
 hl.env("GDK_SCALE", tostring(omarchy_gdk_scale))
 
