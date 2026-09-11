@@ -1,0 +1,7 @@
+[SddmGreeterTheme]
+Name=Omarchy (user picker)
+Description=Omarchy terminal-style login with an editable username field for multi-user machines
+Author=Omarchy / magnus
+Type=sddm-theme
+Version=1.0
+QtVersion=6

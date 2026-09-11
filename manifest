@@ -28,3 +28,5 @@ system/etc/udev/rules.d/90-zbook-power-caps.rules
 system/etc/sudoers.d/zbook-power-caps
 home/.config/systemd/user/omarchy-config-sync.service
 home/.config/systemd/user/omarchy-config-sync.timer
+system/usr/share/sddm/themes/omarchy-users/
+system/etc/sddm.conf.d/zz-login-user-picker.conf

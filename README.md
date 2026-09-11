@@ -47,6 +47,7 @@ want to review before committing.
 | Theme | `.config/omarchy/themes/combitech/` | Custom theme. |
 | Image viewer | `.config/mimeapps.list` | Images open with `imv-dir`, so the viewer loads the whole folder and Left/Right step between pictures. Set here because Omarchy overwrites the imv desktop entry on refresh. |
 | CPU power caps | `system/usr/local/bin/zbook-power-caps` + systemd unit, udev rule, sudoers rule | HP ZBook Studio G9 firmware leaves the CPU peak cap at 45 W even on the 200 W adapter. This script raises it in "nuts" mode, re-applies on boot, resume and adapter events, and the sudoers rule lets the shell toggle it without a password. |
+| Login screen | `system/usr/share/sddm/themes/omarchy-users/`, `system/etc/sddm.conf.d/zz-login-user-picker.conf` | Copy of the Omarchy SDDM theme with an editable username line (Up/Down cycles users, Tab edits). The stock theme only ever logs in the last user, so a second account like `rejser` could not sign in. Autologin for `magnus` stays; log out to reach the picker. |
 
 ## Notes
 
