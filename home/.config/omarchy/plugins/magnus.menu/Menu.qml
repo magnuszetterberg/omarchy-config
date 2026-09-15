@@ -5,6 +5,8 @@ import QtQuick
 import qs.Commons
 import qs.Ui
 import "MenuModel.js" as MenuModel
+// Host services, for the fallback AppLibrary below (OMARCHY_PATH is static).
+import "file:///usr/share/omarchy/shell/services" as HostServices
 
 Item {
   id: root
@@ -77,7 +79,18 @@ Item {
 
   // Shared application engine (entries, hidden filters, icons, launch,
   // removal), owned by the shell and also used by the standalone launcher.
-  readonly property var appLibrary: root.shell ? root.shell.appLibrary : null
+  // Omarchy 4.0.3 sandboxes cloned (third-party) menus behind PluginShellApi.
+  // That API arrives with appLibrary == null and is revoked a moment later:
+  // manifest.kinds stops being a JS Array after crossing the panel
+  // Instantiator's model boundary, so manifestHasKind() computes a "no-menu"
+  // profile, and prunePluginApis() then destroys the mismatching API. Fall
+  // back to a private AppLibrary so the Apps submenu keeps working; the host
+  // one is preferred whenever it is actually usable.
+  readonly property var appLibrary: (root.shell && root.shell.appLibrary) ? root.shell.appLibrary : fallbackAppLibrary
+  HostServices.AppLibrary {
+    id: fallbackAppLibrary
+    omarchyPath: root.omarchyPath
+  }
   property bool deleteConfirmOpen: false
   property var deleteTarget: null
   // Desktop-id → shortcut combo shown on app rows, from `omarchy-launch-hint

@@ -23,3 +23,4 @@ application/yaml=code.desktop
 [Added Associations]
 text/csv=code.desktop;
 application/yaml=code.desktop;
+text/x-log=code.desktop;
