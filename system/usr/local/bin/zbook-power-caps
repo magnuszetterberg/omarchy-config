@@ -9,7 +9,13 @@
 #
 #   nuts | stock   remember the mode in /var/lib/zbook-power-caps/mode and apply it
 #   auto           re-apply the remembered mode (boot, resume, adapter events)
-#   status         print mode and live caps (no root needed)
+#   status         print mode, adapter and live caps (no root needed)
+#
+# Adapter detection: the AC "online" flag only says the EC accepted *some*
+# adapter. The barrel is told apart by the PL1 the EC programs: 70 W on the
+# 200 W barrel, 50 W on battery, less on USB-C. The EC takes several seconds
+# after a plug event to publish the new PL1 (and ramps 35->48->50 W after an
+# unplug), so "auto" waits for PL1 to settle instead of sleeping a fixed time.
 
 STATE_DIR=/var/lib/zbook-power-caps
 STATE=$STATE_DIR/mode
@@ -20,21 +26,44 @@ NUTS_PL2=100000000    # firmware PPCC maximum for PL2 on AC
 NUTS_PL4=120000000    # chip spec is 215 W; 120 W keeps bursts moderate
 STOCK_PL2=40000000
 STOCK_PL4=45000000
+BARREL_PL1=70000000
+SETTLE_MAX=20         # seconds to wait for the EC after an adapter event
+SETTLE_STABLE=3       # PL1 unchanged this many seconds = settled
 
 saved_mode() { cat "$STATE" 2>/dev/null || echo stock; }
-on_barrel() {
-    [ "$(cat /sys/class/power_supply/AC/online 2>/dev/null)" = 1 ] &&
-    [ "$(cat $MMIO/constraint_0_power_limit_uw 2>/dev/null || echo 0)" -ge 70000000 ]
+ac_online() { cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0; }
+pl1() { cat $MMIO/constraint_0_power_limit_uw 2>/dev/null || echo 0; }
+adapter() {
+    if [ "$(ac_online)" != 1 ]; then echo none
+    elif [ "$(pl1)" -ge $BARREL_PL1 ]; then echo barrel
+    else echo other   # USB-C PD, or an adapter the EC accepted at reduced power
+    fi
 }
+on_barrel() { [ "$(adapter)" = barrel ]; }
+
+# Wait until PL1 has been stable for SETTLE_STABLE seconds (max SETTLE_MAX).
+# Returns early when the barrel is already reported, since that is the final state.
+settle() {
+    last=$(pl1); stable=0; t=0
+    while [ $t -lt $SETTLE_MAX ]; do
+        sleep 1; t=$((t+1))
+        cur=$(pl1)
+        if [ "$cur" = "$last" ]; then stable=$((stable+1)); else stable=0; last=$cur; fi
+        on_barrel && break
+        [ $stable -ge $SETTLE_STABLE ] && break
+    done
+    echo $t
+}
+
 apply() {
     if [ "$1" = nuts ] && on_barrel; then
         echo $NUTS_PL2 > $MMIO/constraint_1_power_limit_uw
         echo $NUTS_PL4 > $MSR/constraint_2_power_limit_uw
-        logger -t zbook-power-caps "nuts on barrel: PL2=100W PL4=120W"
+        logger -t zbook-power-caps "nuts on barrel (ac=$(ac_online) pl1=$(($(pl1)/1000000))W${2:+ settle=${2}s}): PL2=100W PL4=120W"
     else
         echo $STOCK_PL2 > $MMIO/constraint_1_power_limit_uw
         echo $STOCK_PL4 > $MSR/constraint_2_power_limit_uw
-        logger -t zbook-power-caps "stock caps (mode=$1, barrel=$(on_barrel && echo yes || echo no)): PL2=40W PL4=45W"
+        logger -t zbook-power-caps "stock caps (mode=$1 adapter=$(adapter) ac=$(ac_online) pl1=$(($(pl1)/1000000))W${2:+ settle=${2}s}): PL2=40W PL4=45W"
     fi
 }
 
@@ -44,10 +73,9 @@ case "${1:-auto}" in
         printf '%s\n' "$1" > "$STATE"; chmod 644 "$STATE"
         apply "$1" ;;
     auto)
-        sleep 3   # let the embedded controller publish the new PL1 after a plug event
-        apply "$(saved_mode)" ;;
+        apply "$(saved_mode)" "$(settle)" ;;
     status)
-        echo "mode=$(saved_mode) barrel=$(on_barrel && echo yes || echo no)"
-        echo "PL1=$(cat $MMIO/constraint_0_power_limit_uw)uW PL2=$(cat $MMIO/constraint_1_power_limit_uw)uW PL4=$(cat $MSR/constraint_2_power_limit_uw)uW" ;;
+        echo "mode=$(saved_mode) adapter=$(adapter) ac=$(ac_online)"
+        echo "PL1=$(pl1)uW PL2=$(cat $MMIO/constraint_1_power_limit_uw)uW PL4=$(cat $MSR/constraint_2_power_limit_uw)uW" ;;
     *)  echo "usage: zbook-power-caps [nuts|stock|auto|status]" >&2; exit 1 ;;
 esac
