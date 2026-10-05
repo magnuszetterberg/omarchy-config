@@ -1,0 +1,35 @@
+# [controls] -- every clickable thing in the shell (buttons, dropdowns, tabs,
+# toggles). Stock omarchy paints all four states in `foreground`, which is why
+# the panels look the same in every theme. Combitech paints them in the CTA
+# teal, so hover/focus/selected are the accent and idle chrome stays navy.
+#
+# *-color accepts the role words foreground / accent / urgent / background /
+# transparent as well as a hex value; fills are that colour at *-fill-alpha.
+
+normal-color        = "foreground"
+normal-fill-alpha   = 0.04
+normal-border       = "#2C5C8F"
+normal-border-width = 1
+normal-border-alpha = 0.55
+
+hover-cursor-color        = "accent"
+hover-cursor-fill-alpha   = 0.16
+hover-cursor-border       = "accent"
+hover-cursor-border-width = 1
+hover-cursor-border-alpha = 0.8
+
+# Keyboard focus gets the full gradient ring so tabbing is unmistakable.
+focus-color        = "accent"
+focus-fill-alpha   = 0.18
+focus-border       = "rgba(4DFFD0ff) rgba(0A5CC4ff) rgba(4DFFD0ff) 45deg"
+focus-border-width = 1
+focus-border-alpha = 1.0
+
+selected-color        = "accent"
+selected-fill-alpha   = 0.28
+selected-border       = "accent"
+selected-border-width = 1
+selected-border-alpha = 0.9
+
+pressed-fill-alpha   = 0.42
+selection-fill-alpha = 0.45

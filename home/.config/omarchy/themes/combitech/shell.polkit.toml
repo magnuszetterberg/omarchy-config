@@ -1,0 +1,11 @@
+# [polkit] -- the password prompt.
+background       = "#00040C"
+background-alpha = 0.92
+text             = "#DCEBF7"
+text-error       = "#FF2D55"
+border           = "hyprland.active-border"
+border-error     = "#FF2D55"
+border-alpha     = 1.0
+scrim            = "#000206"
+scrim-alpha      = 0.6
+accent           = "#00E5A8"

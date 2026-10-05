@@ -18,8 +18,8 @@ dark_foreground = "#5A85B0"
 light_foreground = "#C4DCF0"
 bright_foreground = "#FFFFFF"
 
-hyprland_active_border = "rgba(00E5A8ff) rgba(0A5CC4ff) rgba(00E5A8ff) 45deg"
-hyprland_inactive_border = "rgba(0A2A5288)"
+hyprland_active_border = "rgba(4DFFD0ff) rgba(0A5CC4ff) rgba(4DFFD0ff) 45deg"
+hyprland_inactive_border = "rgba(0A5CC455)"
 
 red = "#FF2D55"
 yellow = "#FFB300"

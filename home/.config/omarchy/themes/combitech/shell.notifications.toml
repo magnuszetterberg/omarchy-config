@@ -1,0 +1,8 @@
+# [notifications] -- toasts. Gradient border + teal countdown ring.
+background       = "#00040C"
+background-alpha = 0.9
+text             = "#DCEBF7"
+border           = "hyprland.active-border"
+border-alpha     = 1.0
+border-width     = 2
+countdown        = "#00E5A8"

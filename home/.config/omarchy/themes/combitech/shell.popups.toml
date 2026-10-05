@@ -1,0 +1,8 @@
+# [popups] -- bar flyouts (audio, network, bluetooth, tray, ...). Translucent
+# so the Hyprland layer blur set in hyprland.lua has something to work with.
+background       = "#00040C"
+background-alpha = 0.88
+text             = "#DCEBF7"
+border           = "hyprland.active-border"
+border-alpha     = 1.0
+border-width     = 2

@@ -19,8 +19,10 @@ x-scheme-handler/about=firefox.desktop
 x-scheme-handler/unknown=firefox.desktop
 text/csv=code.desktop
 application/yaml=code.desktop
+text/markdown=code.desktop
 
 [Added Associations]
 text/csv=code.desktop;
 application/yaml=code.desktop;
 text/x-log=code.desktop;
+text/markdown=code.desktop;

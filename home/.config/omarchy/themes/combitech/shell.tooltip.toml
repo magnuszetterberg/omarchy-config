@@ -1,0 +1,6 @@
+# [tooltip] -- hover tooltips. Teal hairline instead of the foreground one.
+background       = "#00040C"
+background-alpha = 0.92
+text             = "#DCEBF7"
+border           = "#00E5A8"
+border-alpha     = 0.8

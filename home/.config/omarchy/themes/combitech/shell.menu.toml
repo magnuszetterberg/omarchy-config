@@ -1,0 +1,14 @@
+# [menu] -- the omarchy menu, clipboard and emoji cards.
+background                = "#00040C"
+background-alpha          = 0.88
+text                      = "#DCEBF7"
+border                    = "rgba(4DFFD0ff) rgba(0A5CC4ff) rgba(4DFFD0ff) 45deg"
+border-alpha              = 1.0
+scrim                     = "#000206"
+scrim-alpha               = 0.62
+# The selected row is a teal chip, not a grey wash.
+selected-background       = "#00E5A8"
+selected-background-alpha = 0.22
+selected-text             = "#4DFFD0"
+selected-border           = "#00E5A8"
+selected-border-alpha     = 0.85

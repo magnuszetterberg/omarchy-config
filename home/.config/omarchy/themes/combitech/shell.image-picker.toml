@@ -1,0 +1,8 @@
+# [image-picker] -- the background/theme carousel.
+scrim                   = "#000206"
+scrim-alpha             = 0.62
+text                    = "#DCEBF7"
+selected-border         = "#4DFFD0"
+selected-border-alpha   = 1.0
+unselected-border       = "#2C5C8F"
+unselected-border-alpha = 0.35

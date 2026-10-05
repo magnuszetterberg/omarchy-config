@@ -1,0 +1,13 @@
+# [lock] -- the password field on the lock screen. Idle is navy, typing lights
+# the gradient, a wrong password goes to the theme's hot red.
+background       = "#00040C"
+background-alpha = 0.7
+text             = "#DCEBF7"
+placeholder      = "#5A85B0"
+text-error       = "#FF2D55"
+border           = "#0A5CC4"
+border-active    = "rgba(4DFFD0ff) rgba(0A5CC4ff) rgba(4DFFD0ff) 45deg"
+border-error     = "#FF2D55"
+border-alpha     = 1.0
+selection        = "#00E5A8"
+selection-alpha  = 0.45
