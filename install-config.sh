@@ -17,10 +17,12 @@ step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 
 step "Packages"
 # zellij: foot opens straight into it. rsync is not needed by the scripts here.
+# rtkit: Omarchy doesn't ship it, and without it PipeWire/WirePlumber run with no
+# realtime priority, so USB and Bluetooth audio underrun under load.
 if command -v omarchy >/dev/null; then
-  omarchy pkg add zellij
+  omarchy pkg add zellij rtkit
 else
-  sudo pacman -S --needed --noconfirm zellij
+  sudo pacman -S --needed --noconfirm zellij rtkit
 fi
 
 step "Home-directory files"
