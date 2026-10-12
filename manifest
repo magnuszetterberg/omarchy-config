@@ -24,6 +24,7 @@ home/.config/uwsm/env.d/50-omarchy-overrides
 home/.local/share/omarchy-overrides/bin/
 system/usr/local/bin/zbook-power-caps
 system/etc/systemd/system/zbook-power-caps.service
+system/etc/systemd/system/zbook-power-caps-watch.service
 system/etc/udev/rules.d/90-zbook-power-caps.rules
 system/etc/sudoers.d/zbook-power-caps
 home/.config/systemd/user/omarchy-config-sync.service

@@ -1,0 +1,12 @@
+[Unit]
+Description=Re-apply CPU power caps whenever the power profile changes
+After=power-profiles-daemon.service
+Wants=power-profiles-daemon.service
+
+[Service]
+ExecStart=/usr/local/bin/zbook-power-caps watch
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

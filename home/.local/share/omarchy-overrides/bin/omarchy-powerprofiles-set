@@ -1,9 +1,11 @@
 #!/bin/bash
 # Override: handle the "Are u nuts?" pseudo-profile, then defer to the stock
 # command. Picking it turns on the raised CPU power caps and sets the real
-# profile to performance; picking any real profile turns the caps back to stock.
+# profile to performance; picking any real profile returns the caps to "stock"
+# mode, where they follow the profile (performance on AC gets raised caps).
+# The profile is switched first so zbook-power-caps sees the new one.
 # Calls without a profile (ac/battery restore from the battery service) pass
-# straight through and leave the caps mode alone.
+# straight through; zbook-power-caps-watch.service follows those switches.
 action="${1:-autodetect}"
 profile="${2:-}"
 if [[ -n $profile ]]; then
@@ -11,8 +13,10 @@ if [[ -n $profile ]]; then
     "Are u nuts?" | "Plug in 200W charger") mode=nuts; profile=performance ;;
     *) mode=stock ;;
   esac
+  /usr/bin/omarchy-powerprofiles-set "$action" "$profile"
+  status=$?
   sudo -n /usr/local/bin/zbook-power-caps "$mode" ||
     echo "omarchy-powerprofiles-set: could not switch caps to $mode (is /etc/sudoers.d/zbook-power-caps installed?)" >&2
-  exec /usr/bin/omarchy-powerprofiles-set "$action" "$profile"
+  exit $status
 fi
 exec /usr/bin/omarchy-powerprofiles-set "$@"

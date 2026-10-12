@@ -1,15 +1,21 @@
 #!/bin/sh
-# zbook-power-caps [nuts|stock|auto|status]
+# zbook-power-caps [nuts|stock|auto|watch|status]
 #
 # HP's firmware raises PL1 to 70 W on the 200 W barrel adapter but leaves the
 # burst/peak caps at their battery values (PL2 40 W, PL4 45 W), which pins the
-# i7-12800H near 1.6 GHz all-core. Windows' Intel Dynamic Tuning driver lifts
-# them; on Linux nothing does. "nuts" mode writes the raised caps whenever the
-# barrel adapter is present; "stock" restores the firmware values.
+# i7-12800H near 1.6 GHz all-core. On USB-C it is worse: PL1 35 W, and the 45 W
+# PL4 holds every core near 1 GHz whenever a few are busy. Windows' Intel
+# Dynamic Tuning driver lifts them; on Linux nothing does, and
+# power-profiles-daemon has no HP platform driver here, so its "performance"
+# profile only changes the EPP hint.
 #
-#   nuts | stock   remember the mode in /var/lib/zbook-power-caps/mode and apply it
-#   auto           re-apply the remembered mode (boot, resume, adapter events)
-#   status         print mode, adapter and live caps (no root needed)
+#   nuts   remember "nuts": PL2 100 W / PL4 120 W whenever the barrel is present
+#   stock  remember "stock": caps follow the power profile. "performance" on AC
+#          gets PL1 >= 45 W / PL2 60 W / PL4 65 W (fits a 90 W USB-C source);
+#          any other profile, or battery, gets the firmware values
+#   auto   re-apply the remembered mode (boot, resume, adapter events)
+#   watch  stay running and re-apply whenever the power profile changes
+#   status print mode, profile, adapter and live caps (no root needed)
 #
 # Adapter detection: the AC "online" flag only says the EC accepted *some*
 # adapter. The barrel is told apart by the PL1 the EC programs: 70 W on the
@@ -19,11 +25,15 @@
 
 STATE_DIR=/var/lib/zbook-power-caps
 STATE=$STATE_DIR/mode
+FW_PL1=$STATE_DIR/fw_pl1   # firmware PL1 saved before PERF_PL1 overwrote it
 MMIO=/sys/class/powercap/intel-rapl-mmio:0
 MSR=/sys/class/powercap/intel-rapl:0
 
 NUTS_PL2=100000000    # firmware PPCC maximum for PL2 on AC
 NUTS_PL4=120000000    # chip spec is 215 W; 120 W keeps bursts moderate
+PERF_PL1=45000000     # performance profile on AC; sized for a 90 W USB-C source
+PERF_PL2=60000000
+PERF_PL4=65000000
 STOCK_PL2=40000000
 STOCK_PL4=45000000
 BARREL_PL1=70000000
@@ -33,6 +43,7 @@ SETTLE_STABLE=3       # PL1 unchanged this many seconds = settled
 saved_mode() { cat "$STATE" 2>/dev/null || echo stock; }
 ac_online() { cat /sys/class/power_supply/AC/online 2>/dev/null || echo 0; }
 pl1() { cat $MMIO/constraint_0_power_limit_uw 2>/dev/null || echo 0; }
+profile() { powerprofilesctl get 2>/dev/null || echo unknown; }
 adapter() {
     if [ "$(ac_online)" != 1 ]; then echo none
     elif [ "$(pl1)" -ge $BARREL_PL1 ]; then echo barrel
@@ -55,15 +66,39 @@ settle() {
     echo $t
 }
 
+# Raise PL1 to PERF_PL1 if the firmware set it lower, remembering the firmware value.
+raise_pl1() {
+    cur=$(pl1)
+    [ "$cur" -ge $PERF_PL1 ] && return
+    echo "$cur" > "$FW_PL1"
+    echo $PERF_PL1 > $MMIO/constraint_0_power_limit_uw
+}
+
+# Put back the firmware PL1 if it is still the value raise_pl1 wrote. After an
+# adapter event the EC has already programmed its own value, so leave that alone.
+restore_pl1() {
+    [ -f "$FW_PL1" ] || return
+    [ "$(pl1)" = $PERF_PL1 ] && cat "$FW_PL1" > $MMIO/constraint_0_power_limit_uw
+    rm -f "$FW_PL1"
+}
+
+caps() {
+    echo "$1" > $MMIO/constraint_1_power_limit_uw
+    echo "$2" > $MSR/constraint_2_power_limit_uw
+}
+
 apply() {
+    mkdir -p "$STATE_DIR"
+    ctx="ac=$(ac_online) profile=$(profile)${2:+ settle=${2}s}"
     if [ "$1" = nuts ] && on_barrel; then
-        echo $NUTS_PL2 > $MMIO/constraint_1_power_limit_uw
-        echo $NUTS_PL4 > $MSR/constraint_2_power_limit_uw
-        logger -t zbook-power-caps "nuts on barrel (ac=$(ac_online) pl1=$(($(pl1)/1000000))W${2:+ settle=${2}s}): PL2=100W PL4=120W"
+        restore_pl1; caps $NUTS_PL2 $NUTS_PL4
+        logger -t zbook-power-caps "nuts on barrel ($ctx pl1=$(($(pl1)/1000000))W): PL2=100W PL4=120W"
+    elif [ "$(ac_online)" = 1 ] && [ "$(profile)" = performance ]; then
+        raise_pl1; caps $PERF_PL2 $PERF_PL4
+        logger -t zbook-power-caps "performance on AC (mode=$1 adapter=$(adapter) $ctx): PL1=$(($(pl1)/1000000))W PL2=60W PL4=65W"
     else
-        echo $STOCK_PL2 > $MMIO/constraint_1_power_limit_uw
-        echo $STOCK_PL4 > $MSR/constraint_2_power_limit_uw
-        logger -t zbook-power-caps "stock caps (mode=$1 adapter=$(adapter) ac=$(ac_online) pl1=$(($(pl1)/1000000))W${2:+ settle=${2}s}): PL2=40W PL4=45W"
+        restore_pl1; caps $STOCK_PL2 $STOCK_PL4
+        logger -t zbook-power-caps "stock caps (mode=$1 adapter=$(adapter) $ctx pl1=$(($(pl1)/1000000))W): PL2=40W PL4=45W"
     fi
 }
 
@@ -74,8 +109,17 @@ case "${1:-auto}" in
         apply "$1" ;;
     auto)
         apply "$(saved_mode)" "$(settle)" ;;
+    watch)
+        # power-profiles-daemon announces profile switches as PropertiesChanged
+        # on its D-Bus object; re-apply on each one that mentions ActiveProfile.
+        apply "$(saved_mode)"
+        gdbus monitor --system --dest org.freedesktop.UPower.PowerProfiles \
+            --object-path /org/freedesktop/UPower/PowerProfiles |
+        while read -r line; do
+            case $line in *ActiveProfile*) apply "$(saved_mode)" ;; esac
+        done ;;
     status)
-        echo "mode=$(saved_mode) adapter=$(adapter) ac=$(ac_online)"
+        echo "mode=$(saved_mode) profile=$(profile) adapter=$(adapter) ac=$(ac_online)"
         echo "PL1=$(pl1)uW PL2=$(cat $MMIO/constraint_1_power_limit_uw)uW PL4=$(cat $MSR/constraint_2_power_limit_uw)uW" ;;
-    *)  echo "usage: zbook-power-caps [nuts|stock|auto|status]" >&2; exit 1 ;;
+    *)  echo "usage: zbook-power-caps [nuts|stock|auto|watch|status]" >&2; exit 1 ;;
 esac

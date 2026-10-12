@@ -2,7 +2,7 @@
 # Restore this config onto a fresh Omarchy install.
 #
 #   bin/install.sh            copy the home-directory files into place
-#   sudo bin/install.sh --system   install the root-owned files (power caps service)
+#   sudo bin/install.sh --system   install the root-owned files (power caps services)
 #
 # Existing files are backed up next to themselves as <name>.bak.<timestamp>.
 set -euo pipefail
@@ -36,12 +36,14 @@ case $mode in
       [[ $src == "$REPO/system/"* ]] || continue
       copy_path "$src" "$dst" "$kind"; echo "install $dst"
     done
-    chmod 755 /usr/local/bin/zbook-power-caps
+    chown root:root /usr/local/bin/zbook-power-caps; chmod 755 /usr/local/bin/zbook-power-caps
     chmod 440 /etc/sudoers.d/zbook-power-caps; chown root:root /etc/sudoers.d/zbook-power-caps
     visudo -cf /etc/sudoers.d/zbook-power-caps >/dev/null
     systemctl daemon-reload
     udevadm control --reload-rules
     systemctl enable --now zbook-power-caps.service
+    systemctl enable zbook-power-caps-watch.service
+    systemctl restart zbook-power-caps-watch.service
     echo; /usr/local/bin/zbook-power-caps status
     ;;
   *) echo "usage: $0 [--home|--system]" >&2; exit 1 ;;
