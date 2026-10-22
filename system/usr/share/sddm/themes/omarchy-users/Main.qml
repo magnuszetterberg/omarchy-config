@@ -4,7 +4,8 @@ import SddmComponents 2.0
 // Omarchy's stock greeter with one addition: an editable username line.
 // The stock theme always logs in userModel.lastUser, which makes a second
 // account unreachable. Up/Down cycles through local users, Tab moves between
-// the username and password fields, Enter logs in.
+// the username and password fields, Enter logs in. Left/Right (or clicking
+// the session line) cycles sessions, e.g. Omarchy <-> GNOME.
 Rectangle {
   id: root
   width: 640
@@ -14,13 +15,46 @@ Rectangle {
   property string currentUser: username.text.trim()
   property bool loginFailed: false
   property var userNames: []
-  property int sessionIndex: {
+  // Indices into sessionModel that are offered; the bare "Hyprland" entry
+  // starts Hyprland without uwsm, which Omarchy doesn't support.
+  property var sessionIndices: []
+  property int sessionIndex: -1
+  property string sessionName: sessionLabel(sessionIndex)
+
+  function sessionLabel(i) {
+    if (i < 0)
+      return ""
+    // SessionModel::NameRole is Qt::UserRole + 4 (it has no DisplayRole)
+    return (sessionModel.data(sessionModel.index(i, 0), Qt.UserRole + 4) || "").toString()
+  }
+
+  function loadSessions() {
+    var idx = []
+    var uwsm = -1
     for (var i = 0; i < sessionModel.rowCount(); i++) {
-      var name = (sessionModel.data(sessionModel.index(i, 0), Qt.DisplayRole) || "").toString()
-      if (name.indexOf("uwsm") !== -1)
-        return i
+      var name = sessionLabel(i)
+      if (name === "Hyprland")
+        continue
+      if (uwsm < 0 && name.indexOf("uwsm") !== -1)
+        uwsm = i
+      idx.push(i)
     }
-    return sessionModel.lastIndex
+    sessionIndices = idx
+    // Last used session if it's offered, otherwise Omarchy.
+    if (idx.indexOf(sessionModel.lastIndex) !== -1)
+      sessionIndex = sessionModel.lastIndex
+    else
+      sessionIndex = uwsm >= 0 ? uwsm : (idx.length > 0 ? idx[0] : sessionModel.lastIndex)
+  }
+
+  function cycleSession(step) {
+    var n = sessionIndices.length
+    if (n < 2)
+      return
+    var pos = sessionIndices.indexOf(sessionIndex)
+    if (pos < 0)
+      pos = step > 0 ? -1 : 0
+    sessionIndex = sessionIndices[(pos + step + n) % n]
   }
 
   function loadUsers() {
@@ -217,6 +251,12 @@ Rectangle {
               } else if (event.key === Qt.Key_Down) {
                 root.cycleUser(1)
                 event.accepted = true
+              } else if (event.key === Qt.Key_Left) {
+                root.cycleSession(-1)
+                event.accepted = true
+              } else if (event.key === Qt.Key_Right) {
+                root.cycleSession(1)
+                event.accepted = true
               }
             }
 
@@ -228,9 +268,24 @@ Rectangle {
         }
       }
 
+      // Session line: "‹ Omarchy (Hyprland uwsm) ›"
       Text {
         anchors.horizontalCenter: parent.horizontalCenter
-        text: "↑↓ switch user   ↹ edit name"
+        visible: root.sessionName.length > 0
+        text: root.sessionIndices.length > 1 ? "‹  " + root.sessionName + "  ›" : root.sessionName
+        color: "#7aa2f7"
+        font.family: "JetBrainsMono Nerd Font"
+        font.pixelSize: 16
+
+        MouseArea {
+          anchors.fill: parent
+          onClicked: { root.cycleSession(1); password.forceActiveFocus() }
+        }
+      }
+
+      Text {
+        anchors.horizontalCenter: parent.horizontalCenter
+        text: "↑↓ switch user   ←→ session   ↹ edit name"
         color: "#3b4261"
         font.family: "JetBrainsMono Nerd Font"
         font.pixelSize: 13
@@ -240,6 +295,7 @@ Rectangle {
 
   Component.onCompleted: {
     loadUsers()
+    loadSessions()
     if (username.text.length > 0)
       password.forceActiveFocus()
     else
