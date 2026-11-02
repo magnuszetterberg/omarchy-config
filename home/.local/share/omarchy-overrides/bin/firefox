@@ -1,7 +1,13 @@
 #!/bin/bash
-# Firefox with only the Intel Vulkan driver visible. With the NVIDIA ICD
-# present, WebGPU picks the dGPU and the GPU process crashes presenting its
-# frames to the Intel-driven Wayland compositor (DRM_IOCTL_SYNCOBJ_FD_TO_HANDLE).
-# WebRender/VA-API don't use Vulkan, so nothing else changes.
-export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_icd.json
+# Firefox with WebGPU on the NVIDIA dGPU. Its zero-copy present path hands
+# NVIDIA dmabufs to the Intel-driven Wayland compositor and the GPU process
+# crashes (DRM_IOCTL_SYNCOBJ_FD_TO_HANDLE), so the NVIDIA Vulkan driver is only
+# exposed when the profile forces CPU readback
+# (dom.webgpu.allow-present-without-readback=false in user.js). Otherwise fall
+# back to Intel-only Vulkan. WebRender/VA-API don't use Vulkan either way.
+profiles=~/.config/mozilla/firefox
+default=$(sed -n 's/^Default=//p' "$profiles/installs.ini" 2>/dev/null | head -1)
+if ! grep -qs '"dom.webgpu.allow-present-without-readback", false' "$profiles/$default/user.js"; then
+  export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_icd.json
+fi
 exec /usr/lib/firefox/firefox "$@"

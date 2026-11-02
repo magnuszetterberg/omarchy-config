@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Chromium (NVIDIA)
+GenericName=Web Browser with WebGPU on the NVIDIA GPU
+Comment=Chromium under XWayland with WebGPU on the NVIDIA dGPU (separate profile)
+Exec=/home/magnus/.local/share/omarchy-overrides/bin/chromium-nvidia %U
+Icon=chromium
+Terminal=false
+Categories=Network;WebBrowser;
+StartupWMClass=chromium-nvidia

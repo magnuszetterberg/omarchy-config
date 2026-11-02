@@ -1,0 +1,23 @@
+#!/bin/bash
+# Chromium with WebGPU (and all its rendering) on the NVIDIA dGPU.
+# Native Wayland can't do this: Chromium's dmabufs cross between the Intel and
+# NVIDIA drivers, so canvases fail to import, and when everything is forced onto
+# NVIDIA, Hyprland (on Intel) aborts importing the buffers (crashed the session
+# twice on 2026-11-02). Under XWayland with ANGLE on Vulkan, frames go through
+# NVIDIA's Vulkan swapchain, which copies them to system memory for the iGPU
+# like prime-run games do.
+# Separate profile: a second instance can't share ~/.config/chromium with the
+# normal (Wayland, Intel) Chromium.
+# xwayland:force_zero_scaling is on, so pass the monitor scale ourselves.
+scale=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused) | .scale' 2>/dev/null)
+exec /usr/lib/chromium/chromium \
+  --user-data-dir="$HOME/.config/chromium-nvidia" \
+  --class=chromium-nvidia \
+  --ozone-platform=x11 \
+  --use-angle=vulkan \
+  --enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE \
+  --use-webgpu-power-preference=default-high-performance \
+  --force-device-scale-factor="${scale:-1}" \
+  --password-store=gnome-libsecret \
+  --no-default-browser-check \
+  "$@"

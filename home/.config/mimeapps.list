@@ -20,9 +20,11 @@ x-scheme-handler/unknown=firefox.desktop
 text/csv=code.desktop
 application/yaml=code.desktop
 text/markdown=code.desktop
+video/mp4=vlc.desktop
 
 [Added Associations]
 text/csv=code.desktop;
 application/yaml=code.desktop;
 text/x-log=code.desktop;
 text/markdown=code.desktop;
+video/mp4=vlc.desktop;
