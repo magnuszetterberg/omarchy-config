@@ -1,0 +1,7 @@
+#!/bin/bash
+# Firefox with only the Intel Vulkan driver visible. With the NVIDIA ICD
+# present, WebGPU picks the dGPU and the GPU process crashes presenting its
+# frames to the Intel-driven Wayland compositor (DRM_IOCTL_SYNCOBJ_FD_TO_HANDLE).
+# WebRender/VA-API don't use Vulkan, so nothing else changes.
+export VK_DRIVER_FILES=/usr/share/vulkan/icd.d/intel_icd.json
+exec /usr/lib/firefox/firefox "$@"

@@ -33,3 +33,5 @@ system/usr/share/sddm/themes/omarchy-users/
 system/etc/sddm.conf.d/zz-login-user-picker.conf
 system/etc/modprobe.d/btusb-no-autosuspend.conf
 home/.config/pipewire/client.conf.d/quickshell-peak-meter.conf
+home/.config/chromium-flags.conf
+home/.local/share/applications/firefox.desktop
